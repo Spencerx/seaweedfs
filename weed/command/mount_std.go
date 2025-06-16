@@ -1,5 +1,5 @@
-//go:build linux || darwin
-// +build linux darwin
+//go:build linux || darwin || freebsd
+// +build linux darwin freebsd
 
 package command
 
@@ -15,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/seaweedfs/seaweedfs/weed/util/version"
 
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/seaweedfs/seaweedfs/weed/glog"
@@ -290,7 +292,7 @@ func RunMount(option *MountOptions, umask os.FileMode) bool {
 	}
 
 	glog.V(0).Infof("mounted %s%s to %v", *option.filer, mountRoot, dir)
-	glog.V(0).Infof("This is SeaweedFS version %s %s %s", util.Version(), runtime.GOOS, runtime.GOARCH)
+	glog.V(0).Infof("This is SeaweedFS version %s %s %s", version.Version(), runtime.GOOS, runtime.GOARCH)
 
 	server.Serve()
 
