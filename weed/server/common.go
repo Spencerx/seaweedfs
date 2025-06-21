@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"google.golang.org/grpc/metadata"
 	"io"
 	"io/fs"
 	"mime/multipart"
@@ -20,18 +18,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/seaweedfs/seaweedfs/weed/util/request_id"
+	"github.com/seaweedfs/seaweedfs/weed/util/version"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/seaweedfs/seaweedfs/weed/filer"
 	"github.com/seaweedfs/seaweedfs/weed/s3api/s3_constants"
 
 	"google.golang.org/grpc"
 
+	"github.com/gorilla/mux"
 	"github.com/seaweedfs/seaweedfs/weed/glog"
 	"github.com/seaweedfs/seaweedfs/weed/operation"
 	"github.com/seaweedfs/seaweedfs/weed/stats"
 	"github.com/seaweedfs/seaweedfs/weed/storage/needle"
-	"github.com/seaweedfs/seaweedfs/weed/util"
-
-	"github.com/gorilla/mux"
 )
 
 var serverStats *stats.ServerStats
@@ -240,19 +241,19 @@ func parseURLPath(path string) (vid, fid, filename, ext string, isVolumeIdOnly b
 
 func statsHealthHandler(w http.ResponseWriter, r *http.Request) {
 	m := make(map[string]interface{})
-	m["Version"] = util.Version()
+	m["Version"] = version.Version()
 	writeJsonQuiet(w, r, http.StatusOK, m)
 }
 func statsCounterHandler(w http.ResponseWriter, r *http.Request) {
 	m := make(map[string]interface{})
-	m["Version"] = util.Version()
+	m["Version"] = version.Version()
 	m["Counters"] = serverStats
 	writeJsonQuiet(w, r, http.StatusOK, m)
 }
 
 func statsMemoryHandler(w http.ResponseWriter, r *http.Request) {
 	m := make(map[string]interface{})
-	m["Version"] = util.Version()
+	m["Version"] = version.Version()
 	m["Memory"] = stats.MemStat()
 	writeJsonQuiet(w, r, http.StatusOK, m)
 }
@@ -428,18 +429,18 @@ func ProcessRangeRequest(r *http.Request, w http.ResponseWriter, totalSize int64
 
 func requestIDMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reqID := r.Header.Get(util.RequestIdHttpHeader)
+		reqID := r.Header.Get(request_id.AmzRequestIDHeader)
 		if reqID == "" {
 			reqID = uuid.New().String()
 		}
 
-		ctx := context.WithValue(r.Context(), util.RequestIDKey, reqID)
+		ctx := context.WithValue(r.Context(), request_id.AmzRequestIDHeader, reqID)
 		ctx = metadata.NewOutgoingContext(ctx,
 			metadata.New(map[string]string{
-				util.RequestIDKey: reqID,
+				request_id.AmzRequestIDHeader: reqID,
 			}))
 
-		w.Header().Set(util.RequestIdHttpHeader, reqID)
+		w.Header().Set(request_id.AmzRequestIDHeader, reqID)
 		h(w, r.WithContext(ctx))
 	}
 }
